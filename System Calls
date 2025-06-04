@@ -1,0 +1,74 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+
+int main()
+{
+    pid_t pid;  
+
+    printf("Parent Process ID: %d\n", getpid());
+
+    // Fork a child process
+    pid = fork();
+
+    if (pid < 0) 
+    {
+        perror("Fork failed");
+        exit(1);
+    }
+    else if (pid == 0) 
+    {
+        // Child process
+        printf("Child Process ID: %d\n", getpid());
+
+        // Replace current process with the ls command
+        execl("/bin/ls", "ls", "-l", NULL);
+
+        // If exec fails
+        perror("Exec failed");
+        exit(1);
+    }
+    else 
+    {
+        // Parent process
+        wait(NULL);  // Wait for child process to finish
+        printf("Child process completed.\n");
+
+        // Open a directory
+        DIR *dir = opendir(".");
+        if (dir == NULL) {
+            perror("Could not open directory");
+            exit(1);
+        }
+
+        struct dirent *entry;
+        struct stat fileStat;
+
+        printf("\nFiles in current directory:\n");
+        while ((entry = readdir(dir)) != NULL)
+        {
+            printf("%s\n", entry->d_name);  // Print file/directory name
+
+            // Get file details using stat()
+            if (stat(entry->d_name, &fileStat) == 0) 
+            {
+                printf("  Size: %ld bytes\n", fileStat.st_size);
+            } 
+            else 
+            {
+                perror("Stat failed");
+            }
+        }
+
+        // Close the directory
+        closedir(dir);
+        printf("Directory reading complete.\n");
+    }
+
+    return 0;
+}
