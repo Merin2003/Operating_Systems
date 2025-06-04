@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Prompt the user for the file name
+echo "Enter the file name:"
+read filename
+
+# Check if the file exists
+if [ ! -f "$filename" ]; then
+  echo "File does not exist."
+  exit 1
+fi
+
+# Prompt the user for the word to search
+echo "Enter the word to search:"
+read word
+
+# Search for the word in the file and count occurrences
+count=$(grep -o -w "$word" "$filename" | wc -l)
+
+# Display the result
+if [ $count -gt 0 ]; then
+  echo "The word '$word' occurs $count times in the file '$filename'."
+else
+  echo "The word '$word' was not found in the file '$filename'."
+fi
