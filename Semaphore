@@ -1,0 +1,74 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <semaphore.h>
+
+#define BUFFER_SIZE 5  // Size of the buffer
+
+int buffer[BUFFER_SIZE]; // Shared buffer
+int in = 0, out = 0;     // Indices for producer and consumer
+
+sem_t empty;  // Semaphore to track empty slots
+sem_t full;   // Semaphore to track filled slots
+pthread_mutex_t mutex; // Mutex for mutual exclusion
+
+void *producer(void *arg) {
+    int produced_items = *((int *)arg);
+    for (int i = 1; i <= produced_items; i++) {
+        sem_wait(&empty);            // Wait for an empty slot
+        pthread_mutex_lock(&mutex);  // Lock buffer access
+
+        buffer[in] = i;  // Produce an item
+        printf("Produced: %d\n", i);
+        in = (in + 1) % BUFFER_SIZE; // Move circular buffer index
+
+        pthread_mutex_unlock(&mutex); // Unlock buffer
+        sem_post(&full);  // Signal that an item is available
+    }
+    return NULL;
+}
+
+void *consumer(void *arg) {
+    int consumed_items = *((int *)arg);
+    for (int i = 1; i <= consumed_items; i++) {
+        sem_wait(&full);            // Wait for an available item
+        pthread_mutex_lock(&mutex); // Lock buffer access
+
+        int item = buffer[out]; // Consume an item
+        printf("Consumed: %d\n", item);
+        out = (out + 1) % BUFFER_SIZE; // Move circular buffer index
+
+        pthread_mutex_unlock(&mutex); // Unlock buffer
+        sem_post(&empty); // Signal that a slot is free
+    }
+    return NULL;
+}
+
+int main() {
+    int num_items;
+
+    printf("Enter the number of items to produce/consume: ");
+    scanf("%d", &num_items);
+
+    pthread_t prod_thread, cons_thread;
+
+    // Initialize semaphores and mutex
+    sem_init(&empty, 0, BUFFER_SIZE);  // All slots are initially empty
+    sem_init(&full, 0, 0);             // No items are available at start
+    pthread_mutex_init(&mutex, NULL);  // Initialize mutex
+
+    // Create producer and consumer threads
+    pthread_create(&prod_thread, NULL, producer, &num_items);
+    pthread_create(&cons_thread, NULL, consumer, &num_items);
+
+    // Wait for both threads to complete
+    pthread_join(prod_thread, NULL);
+    pthread_join(cons_thread, NULL);
+
+    // Destroy semaphores and mutex
+    sem_destroy(&empty);
+    sem_destroy(&full);
+    pthread_mutex_destroy(&mutex);
+
+    return 0;
+}
